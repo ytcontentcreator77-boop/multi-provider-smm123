@@ -1,0 +1,79 @@
+-- V5 feature foundations. Existing rows and financial records remain untouched.
+
+CREATE TABLE IF NOT EXISTS membership_levels (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, threshold_usd INTEGER NOT NULL DEFAULT 0,
+ discount_pct REAL NOT NULL DEFAULT 0, icon TEXT NOT NULL DEFAULT '', color TEXT NOT NULL DEFAULT '',
+ enabled INTEGER NOT NULL DEFAULT 1, sort INTEGER NOT NULL DEFAULT 0, service_ids TEXT NOT NULL DEFAULT '[]', category_rules TEXT NOT NULL DEFAULT '[]',
+ created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS membership_history (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, old_level_id INTEGER, new_level_id INTEGER,
+ reason TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS coupons (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, value INTEGER NOT NULL,
+ min_purchase INTEGER NOT NULL DEFAULT 0, max_discount INTEGER, starts_at INTEGER, expires_at INTEGER,
+ total_limit INTEGER, per_user_limit INTEGER NOT NULL DEFAULT 1, first_order_only INTEGER NOT NULL DEFAULT 0,
+ service_ids TEXT NOT NULL DEFAULT '[]', category_rules TEXT NOT NULL DEFAULT '[]', customer_ids TEXT NOT NULL DEFAULT '[]',
+ enabled INTEGER NOT NULL DEFAULT 1, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS coupon_redemptions (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, coupon_id INTEGER NOT NULL, user_id INTEGER NOT NULL, order_id INTEGER,
+ discount_amount INTEGER NOT NULL DEFAULT 0, reward_amount INTEGER NOT NULL DEFAULT 0, redeemed_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS coupon_redemptions_user ON coupon_redemptions(coupon_id,user_id);
+CREATE TABLE IF NOT EXISTS support_tickets (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, subject TEXT NOT NULL, category TEXT NOT NULL DEFAULT 'general',
+ status TEXT NOT NULL DEFAULT 'open', priority TEXT NOT NULL DEFAULT 'normal', assigned_to INTEGER, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS tickets_user ON support_tickets(user_id,updated_at);
+CREATE TABLE IF NOT EXISTS ticket_messages (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER NOT NULL, sender_id INTEGER NOT NULL, is_admin INTEGER NOT NULL DEFAULT 0,
+ internal_note INTEGER NOT NULL DEFAULT 0, message TEXT NOT NULL, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ticket_attachments (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, message_id INTEGER NOT NULL, file_id TEXT NOT NULL, file_name TEXT, mime TEXT, size INTEGER, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS promotions (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, kind TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+ reward_type TEXT NOT NULL DEFAULT 'balance', reward_value INTEGER NOT NULL DEFAULT 0, starts_at INTEGER, expires_at INTEGER,
+ participant_limit INTEGER, budget INTEGER, spent INTEGER NOT NULL DEFAULT 0, visible INTEGER NOT NULL DEFAULT 1,
+ enabled INTEGER NOT NULL DEFAULT 1, direct_link TEXT NOT NULL DEFAULT '', config TEXT NOT NULL DEFAULT '{}', created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS promotion_participants (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, user_id INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+ proof TEXT, rejection_reason TEXT, reward_id INTEGER, joined_at INTEGER NOT NULL, reviewed_at INTEGER,
+ UNIQUE(promotion_id,user_id)
+);
+CREATE TABLE IF NOT EXISTS promotion_rewards (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, promotion_id INTEGER NOT NULL, user_id INTEGER NOT NULL, reward_type TEXT NOT NULL,
+ amount INTEGER NOT NULL DEFAULT 0, reference_id INTEGER, created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS free_service_campaigns (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, service_id INTEGER NOT NULL, provider_id INTEGER NOT NULL,
+ quantity INTEGER NOT NULL, per_user_limit INTEGER NOT NULL DEFAULT 1, daily_limit INTEGER, budget INTEGER,
+ starts_at INTEGER, expires_at INTEGER, enabled INTEGER NOT NULL DEFAULT 1, timezone TEXT NOT NULL DEFAULT 'UTC', created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS free_service_claims (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, campaign_id INTEGER NOT NULL, user_id INTEGER NOT NULL, order_id INTEGER,
+ quantity INTEGER NOT NULL, cost INTEGER NOT NULL DEFAULT 0, claimed_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS free_claim_daily_guard ON free_service_claims(campaign_id,user_id,claimed_at);
+CREATE TABLE IF NOT EXISTS loyalty_accounts (user_id INTEGER PRIMARY KEY, points INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS loyalty_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,points INTEGER NOT NULL,reason TEXT NOT NULL,reference_id INTEGER,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS cashback_transactions (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,order_id INTEGER,amount INTEGER NOT NULL,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS message_templates (key TEXT PRIMARY KEY, template TEXT NOT NULL, updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS broadcast_campaigns (id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,content TEXT NOT NULL,media_type TEXT,media_id TEXT,buttons TEXT NOT NULL DEFAULT '[]',audience TEXT NOT NULL DEFAULT '{}',scheduled_at INTEGER,status TEXT NOT NULL DEFAULT 'draft',created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS broadcast_deliveries (campaign_id INTEGER NOT NULL,user_id INTEGER NOT NULL,status TEXT NOT NULL,error TEXT,attempted_at INTEGER NOT NULL,PRIMARY KEY(campaign_id,user_id));
+CREATE TABLE IF NOT EXISTS ai_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,context TEXT NOT NULL DEFAULT '{}',updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS ai_order_drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,service_id INTEGER,link TEXT,quantity INTEGER,price INTEGER,status TEXT NOT NULL DEFAULT 'draft',expires_at INTEGER,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS ai_usage_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,provider TEXT NOT NULL,usage INTEGER NOT NULL DEFAULT 0,cost INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS legal_policies (id INTEGER PRIMARY KEY AUTOINCREMENT,key TEXT NOT NULL,version INTEGER NOT NULL,title TEXT NOT NULL,content TEXT NOT NULL,published INTEGER NOT NULL DEFAULT 0,effective_at INTEGER,created_at INTEGER NOT NULL,UNIQUE(key,version));
+CREATE TABLE IF NOT EXISTS policy_acceptances (user_id INTEGER NOT NULL,policy_id INTEGER NOT NULL,accepted_at INTEGER NOT NULL,PRIMARY KEY(user_id,policy_id));
+CREATE TABLE IF NOT EXISTS maintenance_settings (id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL DEFAULT 0,message TEXT NOT NULL DEFAULT '',image_url TEXT NOT NULL DEFAULT '',return_at INTEGER,allow_tickets INTEGER NOT NULL DEFAULT 1,allow_announcements INTEGER NOT NULL DEFAULT 1,updated_at INTEGER NOT NULL);
+INSERT OR IGNORE INTO maintenance_settings(id,updated_at) VALUES(1,unixepoch());
+CREATE TABLE IF NOT EXISTS maintenance_events (id INTEGER PRIMARY KEY AUTOINCREMENT,enabled INTEGER NOT NULL,message TEXT,actor_id INTEGER,created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS automation_jobs (id INTEGER PRIMARY KEY AUTOINCREMENT,job_key TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,config TEXT NOT NULL DEFAULT '{}',last_run_at INTEGER,next_run_at INTEGER,updated_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS audit_logs (id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id INTEGER NOT NULL,action TEXT NOT NULL,entity TEXT,entity_id TEXT,details TEXT NOT NULL DEFAULT '{}',created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS backup_history (id INTEGER PRIMARY KEY AUTOINCREMENT,kind TEXT NOT NULL,status TEXT NOT NULL,details TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS order_events (id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INTEGER NOT NULL,event TEXT NOT NULL,details TEXT NOT NULL DEFAULT '{}',created_at INTEGER NOT NULL);

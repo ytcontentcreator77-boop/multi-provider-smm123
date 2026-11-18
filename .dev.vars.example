@@ -1,0 +1,25 @@
+# Copy to .dev.vars for local development (never commit .dev.vars).
+# The only required first-run secret. Generate with: openssl rand -base64 32
+APP_ENCRYPTION_KEY=replace-with-a-random-secret-at-least-32-characters
+
+# Local development only, not asked for on deploy: opens the app in a normal browser as this Telegram user id
+# DEV_FAKE_USER_ID=1
+# Optional fixed admin ids (otherwise claim admin on the setup page)
+# OWNER_IDS=1
+
+# Payment gateway credentials (use test merchant credentials first; never commit real keys)
+# Khalti merchant dashboard -> API Secret Key
+# KHALTI_SECRET_KEY=
+# KHALTI_BASE_URL=https://a.khalti.com/api/v2
+
+# eSewa ePay V2 merchant credentials
+# ESEWA_PRODUCT_CODE=
+# ESEWA_SECRET_KEY=
+# ESEWA_ENV=test
+
+# Paytm Payment Gateway merchant credentials (India; includes UPI where enabled on the merchant account)
+# PAYTM_MID=
+# PAYTM_MERCHANT_KEY=
+# PAYTM_WEBSITE=DEFAULT
+# PAYTM_ENV=test
+# PAYTM_BASE_URL=https://securegw-stage.paytm.in
